@@ -77,6 +77,8 @@ st.markdown("""
         border-right: 1px solid #e2e8f0 !important;
     }
 
+
+
     /* Force ALL sidebar text to be slate */
     section[data-testid="stSidebar"] * {
         color: #475569 !important;
@@ -85,6 +87,10 @@ st.markdown("""
     section[data-testid="stSidebar"] h2,
     section[data-testid="stSidebar"] h3 {
         color: #0f172a !important;
+    }
+    section[data-testid="stSidebar"] button,
+    section[data-testid="stSidebar"] button * {
+        color: #ffffff !important;
     }
 
     /* Sidebar labels */
@@ -553,70 +559,56 @@ def seed_demo_data():
 # Seed on load
 seed_demo_data()
 
-# Initialize session states
-if "show_settings" not in st.session_state:
-    st.session_state.show_settings = False
-
-# --- COLLAPSIBLE SIDEBAR WITH HAMBURGER TOGGLE ---
+# --- ALWAYS EXPANDED SIDEBAR CONFIGURATION ---
 with st.sidebar:
     st.markdown("""
-        <div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;'>
-            <h2 style='margin: 0;'>⚡ Dashboard</h2>
+        <div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;'>
+            <h2 style='margin: 0; font-family: "Outfit", sans-serif;'>⚡ CompetitorPulse</h2>
         </div>
     """, unsafe_allow_html=True)
     
-    # Gear / settings toggle button
-    settings_icon = "⚙️ Collapse Setup Panels" if st.session_state.show_settings else "⚙️ Expand Setup / API Keys"
-    if st.button(settings_icon, use_container_width=True):
-        st.session_state.show_settings = not st.session_state.show_settings
-        st.rerun()
+    st.markdown("<h3>🔑 Configuration</h3>", unsafe_allow_html=True)
+    
+    # Credentials inputs
+    with st.expander("🔑 Bright Data API Keys", expanded=True):
+        sbr_ws = st.text_input(
+            "Scraping Browser Websocket",
+            value=os.getenv("BRIGHTDATA_SBR_WS_ENDPOINT", ""),
+            type="password",
+            help="CDP endpoint: wss://<username>:<password>@brd.superproxy.io:9222"
+        )
+        serp_key = st.text_input(
+            "API Key",
+            value=os.getenv("BRIGHTDATA_API_KEY", ""),
+            type="password"
+        )
+        serp_zone = st.text_input(
+            "SERP Zone Name",
+            value=os.getenv("BRIGHTDATA_SERP_ZONE", "")
+        )
         
-    st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
-
-    # Conditionally display Configuration section
-    if st.session_state.show_settings:
-        st.markdown("<h3>🔑 Configuration</h3>", unsafe_allow_html=True)
-        # Credentials inputs
-        with st.expander("🔑 Bright Data API Keys", expanded=True):
-            sbr_ws = st.text_input(
-                "Scraping Browser Websocket",
-                value=os.getenv("BRIGHTDATA_SBR_WS_ENDPOINT", ""),
-                type="password",
-                help="CDP endpoint: wss://<username>:<password>@brd.superproxy.io:9222"
-            )
-            serp_key = st.text_input(
-                "API Key",
-                value=os.getenv("BRIGHTDATA_API_KEY", ""),
-                type="password"
-            )
-            serp_zone = st.text_input(
-                "SERP Zone Name",
-                value=os.getenv("BRIGHTDATA_SERP_ZONE", "")
-            )
+        # Save inputs dynamically
+        if sbr_ws:
+            scraper.SBR_WS_ENDPOINT = sbr_ws
+        if serp_key:
+            scraper.BRIGHTDATA_API_KEY = serp_key
+        if serp_zone:
+            scraper.BRIGHTDATA_SERP_ZONE = serp_zone
             
-            # Save inputs dynamically
-            if sbr_ws:
-                scraper.SBR_WS_ENDPOINT = sbr_ws
-            if serp_key:
-                scraper.BRIGHTDATA_API_KEY = serp_key
-            if serp_zone:
-                scraper.BRIGHTDATA_SERP_ZONE = serp_zone
-                
-        with st.expander("🤖 LLM Configuration", expanded=True):
-            gemini_key = st.text_input(
-                "Gemini API Key",
-                value=os.getenv("GEMINI_API_KEY", ""),
-                type="password"
-            )
-            if gemini_key:
-                os.environ["GEMINI_API_KEY"] = gemini_key
-                
-        st.markdown("<hr style='margin: 15px 0;'>", unsafe_allow_html=True)
-        st.markdown("<h3>➕ Add Competitor</h3>", unsafe_allow_html=True)
+    with st.expander("🤖 LLM Configuration", expanded=True):
+        gemini_key = st.text_input(
+            "Gemini API Key",
+            value=os.getenv("GEMINI_API_KEY", ""),
+            type="password"
+        )
+        if gemini_key:
+            os.environ["GEMINI_API_KEY"] = gemini_key
+            
+    with st.expander("➕ Add Competitor", expanded=False):
         new_name = st.text_input("Competitor Name", placeholder="e.g. Stripe")
         new_domain = st.text_input("Domain Name", placeholder="e.g. stripe.com")
         
-        if st.button("Add to Monitor", use_container_width=True):
+        if st.button("Add to Monitor", width='stretch'):
             if new_name and new_domain:
                 database.add_competitor(new_name, new_domain)
                 st.success(f"Added {new_name} to database!")
@@ -624,9 +616,8 @@ with st.sidebar:
                 st.rerun()
             else:
                 st.error("Please fill in both fields.")
-        st.markdown("<hr style='margin: 15px 0;'>", unsafe_allow_html=True)
-
-    # Monitored Competitors list is always visible
+                
+    st.markdown("<hr style='margin: 15px 0;'>", unsafe_allow_html=True)
     st.markdown("<h3>📋 Monitored Competitors</h3>", unsafe_allow_html=True)
     competitors = database.get_all_competitors()
     
@@ -785,7 +776,7 @@ with st.container(border=True):
         elif "Shopify" in sector_option:
             target_name = "Shopify"
             
-        if st.button(f"⚡ Load {target_name} Demo Data", use_container_width=True):
+        if st.button(f"⚡ Load {target_name} Demo Data", width='stretch'):
             seed_demo_data()
             st.session_state.selected_competitor_name = target_name
             st.success(f"Switched dashboard to {target_name}!")
@@ -795,6 +786,29 @@ with st.container(border=True):
         st.markdown(svg_diagram, unsafe_allow_html=True)
 
 st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+
+# --- TRACK B: CREATE/START A NEW PROJECT FROM SCRATCH ---
+with st.container(border=True):
+    st.markdown("### ➕ Monitor a New Competitor from Scratch")
+    st.markdown("Ready to analyze a new competitor? Enter their name and domain below to add them to your monitored list and start a fresh tracking project:")
+    
+    col_scr1, col_scr2, col_scr3 = st.columns([3, 3, 2])
+    with col_scr1:
+        scratch_name = st.text_input("Competitor Name", placeholder="e.g. Stripe", key="scratch_comp_name")
+    with col_scr2:
+        scratch_domain = st.text_input("Domain Name", placeholder="e.g. stripe.com", key="scratch_comp_domain")
+    with col_scr3:
+        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True) # align with inputs
+        if st.button("➕ Start Project", width='stretch'):
+            if scratch_name and scratch_domain:
+                database.add_competitor(scratch_name, scratch_domain)
+                st.success(f"Successfully added {scratch_name} to your monitored list!")
+                st.session_state.selected_competitor_name = scratch_name
+                st.rerun()
+            else:
+                st.error("Please fill in both fields.")
+
+st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
 
 # --- RENDER MONITORED COMPETITOR METRICS & TABS ---
 if selected_competitor:
@@ -822,8 +836,34 @@ if selected_competitor:
     
     # Trigger Scan Execution
     if trigger_scan:
-        if not os.getenv("GEMINI_API_KEY"):
-            st.error("Please configure the Gemini API Key in the sidebar expander first!")
+        # Sync credentials from sidebar text inputs explicitly
+        if gemini_key:
+            os.environ["GEMINI_API_KEY"] = gemini_key
+        if sbr_ws:
+            scraper.SBR_WS_ENDPOINT = sbr_ws
+            os.environ["BRIGHTDATA_SBR_WS_ENDPOINT"] = sbr_ws
+        if serp_key:
+            scraper.BRIGHTDATA_API_KEY = serp_key
+            os.environ["BRIGHTDATA_API_KEY"] = serp_key
+        if serp_zone:
+            scraper.BRIGHTDATA_SERP_ZONE = serp_zone
+            os.environ["BRIGHTDATA_SERP_ZONE"] = serp_zone
+            
+        # Check if keys are configured
+        gemini_key_missing = not os.getenv("GEMINI_API_KEY")
+        sbr_ws_missing = not scraper.SBR_WS_ENDPOINT
+        serp_key_missing = not scraper.BRIGHTDATA_API_KEY
+        
+        if gemini_key_missing or sbr_ws_missing or serp_key_missing:
+            missing_fields = []
+            if gemini_key_missing:
+                missing_fields.append("Gemini API Key")
+            if sbr_ws_missing:
+                missing_fields.append("Bright Data Scraping Browser Websocket")
+            if serp_key_missing:
+                missing_fields.append("Bright Data API Key (SERP)")
+                
+            st.error(f"Missing required API credentials: {', '.join(missing_fields)}. Please configure them in the sidebar configuration first!")
         else:
             progress_bar = st.progress(0)
             status_text = st.empty()
@@ -992,3 +1032,5 @@ if selected_competitor:
         st.info("No scans have been performed for this competitor yet. Add your credentials in the sidebar and click 'Scan & Analyze' to initiate the autonomous multi-agent pipeline!")
 else:
     st.info("No competitor selected. Please add a competitor in the sidebar to begin monitoring.")
+
+
