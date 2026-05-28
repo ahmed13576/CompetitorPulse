@@ -1,6 +1,7 @@
 import streamlit as st
 import asyncio
 import os
+import json
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
@@ -21,18 +22,18 @@ st.set_page_config(
 # Initialize Database
 database.init_db()
 
-# --- CUSTOM CSS FOR PREMIUM DESIGN ---
+# --- CUSTOM CSS FOR PREMIUM LIGHT DESIGN ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@500;700&display=swap');
 
-    /* ===== GLOBAL RESETS & DARK THEME ===== */
+    /* ===== GLOBAL RESETS & LIGHT THEME ===== */
     .stApp {
-        background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%);
-        color: #e2e8f0;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        color: #334155;
     }
 
-    /* Kill the white header / toolbar bar at the very top */
+    /* Kill the header / toolbar bar at the very top */
     header[data-testid="stHeader"],
     [data-testid="stHeader"] {
         background: transparent !important;
@@ -48,175 +49,188 @@ st.markdown("""
     /* ===== TYPOGRAPHY ===== */
     html, body, [class*="css"], .stMarkdown, .stText {
         font-family: 'Inter', sans-serif;
-        color: #e2e8f0;
+        color: #334155;
     }
 
     h1, h2, h3, h4, h5, h6 {
         font-family: 'Outfit', sans-serif !important;
-        color: #00f5d4 !important;
+        color: #0f172a !important;
         font-weight: 700;
     }
 
     p, span, li, label, div {
-        color: #e2e8f0;
+        color: #334155;
     }
 
     a {
-        color: #00f5d4 !important;
+        color: #0d9488 !important;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    a:hover {
+        text-decoration: underline;
     }
 
     /* ===== SIDEBAR ===== */
     section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0b132b 0%, #101d3d 100%) !important;
-        border-right: 1px solid rgba(0, 245, 212, 0.15);
+        background: #ffffff !important;
+        border-right: 1px solid #e2e8f0 !important;
     }
 
-    /* Force ALL sidebar text to be light */
+    /* Force ALL sidebar text to be slate */
     section[data-testid="stSidebar"] * {
-        color: #cbd5e1 !important;
+        color: #475569 !important;
     }
     section[data-testid="stSidebar"] h1,
     section[data-testid="stSidebar"] h2,
     section[data-testid="stSidebar"] h3 {
-        color: #00f5d4 !important;
+        color: #0f172a !important;
     }
 
     /* Sidebar labels */
     section[data-testid="stSidebar"] label,
     section[data-testid="stSidebar"] .stTextInput label,
     section[data-testid="stSidebar"] [data-testid="stWidgetLabel"] {
-        color: #94a3b8 !important;
+        color: #64748b !important;
         font-size: 0.85rem;
-        font-weight: 500;
+        font-weight: 600;
         letter-spacing: 0.02em;
     }
 
     /* Sidebar expanders */
     section[data-testid="stSidebar"] [data-testid="stExpander"] {
-        background: rgba(28, 37, 65, 0.4) !important;
-        border: 1px solid rgba(0, 245, 212, 0.12) !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
         border-radius: 10px !important;
         margin-bottom: 8px;
     }
     section[data-testid="stSidebar"] [data-testid="stExpander"] summary,
     section[data-testid="stSidebar"] [data-testid="stExpander"] summary span,
     section[data-testid="stSidebar"] [data-testid="stExpander"] summary p {
-        color: #e2e8f0 !important;
+        color: #1e293b !important;
         font-weight: 600;
     }
     section[data-testid="stSidebar"] [data-testid="stExpander"] svg {
-        fill: #00f5d4 !important;
-        color: #00f5d4 !important;
+        fill: #0d9488 !important;
+        color: #0d9488 !important;
     }
 
     /* Sidebar radio buttons */
     section[data-testid="stSidebar"] .stRadio label span,
     section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label {
-        color: #cbd5e1 !important;
+        color: #475569 !important;
     }
     section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label[data-selected="true"],
     section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:hover {
-        color: #00f5d4 !important;
+        color: #0d9488 !important;
     }
 
     /* Sidebar inputs */
     section[data-testid="stSidebar"] input,
     section[data-testid="stSidebar"] textarea {
-        background: rgba(28, 37, 65, 0.6) !important;
-        color: #e2e8f0 !important;
-        border: 1px solid rgba(0, 245, 212, 0.2) !important;
+        background: #f8fafc !important;
+        color: #1e293b !important;
+        border: 1px solid #cbd5e1 !important;
         border-radius: 8px !important;
     }
     section[data-testid="stSidebar"] input:focus,
     section[data-testid="stSidebar"] textarea:focus {
-        border-color: #00f5d4 !important;
-        box-shadow: 0 0 0 2px rgba(0, 245, 212, 0.15) !important;
+        border-color: #0d9488 !important;
+        box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.15) !important;
     }
     section[data-testid="stSidebar"] input::placeholder {
-        color: #64748b !important;
+        color: #94a3b8 !important;
     }
 
     /* Sidebar horizontal rules */
     section[data-testid="stSidebar"] hr {
-        border-color: rgba(0, 245, 212, 0.12) !important;
+        border-color: #e2e8f0 !important;
     }
 
     /* Sidebar success/error messages */
     section[data-testid="stSidebar"] .stAlert {
-        background: rgba(28, 37, 65, 0.5) !important;
+        background: #f0fdfa !important;
         border-radius: 8px;
     }
 
     /* ===== MAIN CONTENT INPUTS ===== */
     input, textarea, select {
-        background-color: rgba(28, 37, 65, 0.6) !important;
-        color: #e2e8f0 !important;
-        border: 1px solid rgba(0, 245, 212, 0.2) !important;
+        background-color: #ffffff !important;
+        color: #1e293b !important;
+        border: 1px solid #cbd5e1 !important;
         border-radius: 8px !important;
     }
     input:focus, textarea:focus {
-        border-color: #00f5d4 !important;
-        box-shadow: 0 0 0 2px rgba(0, 245, 212, 0.15) !important;
+        border-color: #0d9488 !important;
+        box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.15) !important;
     }
 
     /* Selectbox / dropdown */
     [data-baseweb="select"] > div {
-        background-color: rgba(28, 37, 65, 0.6) !important;
-        border-color: rgba(0, 245, 212, 0.2) !important;
-        color: #e2e8f0 !important;
+        background-color: #ffffff !important;
+        border-color: #cbd5e1 !important;
+        color: #1e293b !important;
     }
     [data-baseweb="popover"] {
-        background-color: #1c2541 !important;
+        background-color: #ffffff !important;
     }
     [data-baseweb="menu"] {
-        background-color: #1c2541 !important;
+        background-color: #ffffff !important;
     }
     [data-baseweb="menu"] li {
-        color: #e2e8f0 !important;
+        color: #1e293b !important;
     }
     [data-baseweb="menu"] li:hover {
-        background-color: rgba(0, 245, 212, 0.1) !important;
+        background-color: rgba(13, 148, 136, 0.08) !important;
     }
 
-    /* ===== PREMIUM GLASSMORPHIC CARDS ===== */
+    /* ===== PREMIUM SHADOW CARDS ===== */
     .glass-card {
-        background: rgba(28, 37, 65, 0.45);
-        border: 1px solid rgba(0, 245, 212, 0.15);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 16px;
         padding: 24px;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
         margin-bottom: 20px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        color: #e2e8f0;
+        box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.03);
+        color: #334155;
     }
     .glass-card p, .glass-card li, .glass-card span {
-        color: #e2e8f0 !important;
+        color: #475569 !important;
     }
     .glass-card strong, .glass-card b {
-        color: #f1f5f9 !important;
+        color: #0f172a !important;
     }
     .glass-card em, .glass-card i {
-        color: #94a3b8 !important;
+        color: #64748b !important;
+    }
+    .glass-card h1, .glass-card h2, .glass-card h3, .glass-card h4 {
+        color: #0f172a !important;
+        margin-top: 15px;
+        margin-bottom: 10px;
+    }
+    .glass-card hr {
+        border-color: #e2e8f0 !important;
+        margin: 15px 0;
     }
 
     /* Metric cards */
     .metric-card {
-        background: rgba(11, 19, 43, 0.6);
-        border: 1px solid rgba(0, 245, 212, 0.25);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 12px;
         padding: 20px 16px;
         text-align: center;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
     }
     .metric-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 20px rgba(0, 245, 212, 0.1);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.05);
     }
     .metric-value {
         font-size: 1.6rem;
         font-weight: 700;
-        color: #00f5d4 !important;
+        color: #0d9488 !important;
         margin-bottom: 6px;
     }
     .metric-label {
@@ -230,15 +244,15 @@ st.markdown("""
     /* ===== TABS ===== */
     .stTabs [data-baseweb="tab-list"] {
         gap: 4px;
-        background-color: rgba(11, 19, 43, 0.5);
+        background-color: #f1f5f9;
         padding: 5px;
         border-radius: 10px;
-        border: 1px solid rgba(0, 245, 212, 0.08);
+        border: 1px solid #e2e8f0;
     }
     .stTabs [data-baseweb="tab"] {
         height: 40px;
         border-radius: 8px;
-        color: #94a3b8 !important;
+        color: #64748b !important;
         border: none;
         background-color: transparent;
         font-weight: 600;
@@ -246,31 +260,32 @@ st.markdown("""
         transition: all 0.2s ease;
     }
     .stTabs [data-baseweb="tab"]:hover {
-        color: #00f5d4 !important;
-        background-color: rgba(0, 245, 212, 0.06);
+        color: #0d9488 !important;
+        background-color: rgba(13, 148, 136, 0.05);
     }
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background-color: #00f5d4 !important;
-        color: #0b132b !important;
+        background-color: #ffffff !important;
+        color: #0d9488 !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     }
 
     /* ===== BUTTONS ===== */
     div.stButton > button {
-        background: linear-gradient(135deg, #00f5d4 0%, #00bbf9 100%) !important;
-        color: #0b132b !important;
+        background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%) !important;
+        color: #ffffff !important;
         border: none !important;
         border-radius: 10px !important;
         padding: 10px 28px !important;
         font-weight: 700 !important;
         font-size: 0.9rem !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 4px 15px rgba(0, 245, 212, 0.25) !important;
+        box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2) !important;
         letter-spacing: 0.02em;
     }
     div.stButton > button:hover {
         transform: translateY(-2px) !important;
-        box-shadow: 0 8px 25px rgba(0, 245, 212, 0.4) !important;
-        color: #0b132b !important;
+        box-shadow: 0 6px 18px rgba(13, 148, 136, 0.35) !important;
+        color: #ffffff !important;
     }
     div.stButton > button:active {
         transform: translateY(0px) !important;
@@ -278,25 +293,25 @@ st.markdown("""
 
     /* ===== ALERTS / INFO BOXES ===== */
     .stAlert, [data-testid="stAlert"] {
-        background: rgba(28, 37, 65, 0.5) !important;
+        background: #ffffff !important;
         border-radius: 10px !important;
-        border: 1px solid rgba(0, 245, 212, 0.12) !important;
-        color: #e2e8f0 !important;
+        border: 1px solid #e2e8f0 !important;
+        color: #334155 !important;
     }
     .stAlert p, [data-testid="stAlert"] p {
-        color: #cbd5e1 !important;
+        color: #475569 !important;
     }
 
     /* ===== PROGRESS BAR ===== */
     .stProgress > div > div > div {
-        background: linear-gradient(90deg, #00f5d4, #00bbf9) !important;
+        background: linear-gradient(90deg, #0d9488, #0891b2) !important;
     }
 
     /* ===== TEXT AREA IN MAIN CONTENT ===== */
     .stTextArea textarea {
-        background: rgba(28, 37, 65, 0.4) !important;
-        color: #e2e8f0 !important;
-        border: 1px solid rgba(0, 245, 212, 0.15) !important;
+        background: #f8fafc !important;
+        color: #1e293b !important;
+        border: 1px solid #cbd5e1 !important;
         border-radius: 8px !important;
         font-family: 'JetBrains Mono', 'Fira Code', monospace;
         font-size: 0.82rem;
@@ -311,50 +326,25 @@ st.markdown("""
         background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-        background: rgba(0, 245, 212, 0.2);
+        background: rgba(13, 148, 136, 0.2);
         border-radius: 3px;
     }
     ::-webkit-scrollbar-thumb:hover {
-        background: rgba(0, 245, 212, 0.4);
+        background: rgba(13, 148, 136, 0.4);
     }
 
-    /* ===== MISC POLISH ===== */
     /* Remove Streamlit footer */
     footer {
         display: none !important;
     }
-    /* Remove the "Made with Streamlit" */
     .viewerBadge_container__r5tak {
         display: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- DATABASE SEEDING (Demo Data) ---
-def seed_demo_data():
-    competitors = database.get_all_competitors()
-    if not competitors:
-        # Seed Stripe as a demo competitor
-        comp_id = database.add_competitor("Stripe", "stripe.com")
-        
-        # Seed a historical scrape
-        database.save_scrape(
-            comp_id, 
-            "https://stripe.com/pricing", 
-            "pricing", 
-            "Stripe pricing: Pay-as-you-go 2.9% + 30c per transaction. Custom enterprise rates available.", 
-            "Stripe pricing: Pay-as-you-go 2.9% + 30c per transaction. Custom enterprise rates available."
-        )
-        database.save_scrape(
-            comp_id, 
-            "https://stripe.com/jobs", 
-            "careers", 
-            "Hiring: Staff Machine Learning Engineer - Billing, Enterprise Account Executive.", 
-            "Hiring: Staff Machine Learning Engineer - Billing, Enterprise Account Executive."
-        )
-        
-        # Seed a demo battlecard
-        demo_battlecard = """
+# --- DEMO DATA DEFINITIONS ---
+stripe_battlecard = """
 # Stripe Competitive Battlecard
 
 ### 1. Company Overview & Positioning Quick-Take
@@ -382,97 +372,443 @@ Stripe is the leading payment processing platform for internet businesses, posit
 ### 6. Strategic Warning Signals
 *   **Hiring Focus:** Significant recruitment for AI Engineering in billing indicates Stripe is deploying automated revenue optimization tools soon.
 *   **Product Launches:** Stripe recently added billing/tax automation modules, increasing vendor lock-in.
-        """
+"""
+
+openai_battlecard = """
+# OpenAI Competitive Battlecard
+
+### 1. Company Overview & Positioning Quick-Take
+OpenAI is the industry-defining LLM pioneer, positioning itself as the leader in frontier artificial intelligence, developer APIs, and enterprise assistant tools (ChatGPT Enterprise).
+
+### 2. Pricing & Packaging Reference
+*   **ChatGPT Plus:** $20/month per user.
+*   **API Pricing:** GPT-4o ($5.00 / 1M input, $15.00 / 1M output tokens).
+*   **Enterprise Agreements:** Bespoke contracts, often requiring $10K+ annual minimum spends.
+
+### 3. How We Win (Our Strengths vs. OpenAI)
+*   **Data Privacy & Compliance:** We offer fully open-source/self-hosted deployment, meaning user data never leaves their secure cloud infrastructure (unlike OpenAI's default API terms).
+*   **Predictable Pricing:** We offer flat-rate capacity hosting, eliminating the risk of spiraling token usage bills.
+*   **Customization:** Deep domain-specific fine-tuning on proprietary databases with full model ownership.
+
+### 4. Where We Lose (OpenAI's Strengths & Objections)
+*   **State-of-the-Art Performance:** OpenAI's models consistently top benchmarks for reasoning, code generation, and multi-modal handling.
+*   **Developer Ecosystem:** Enormous developer mindshare, pre-built tooling (LangChain, LlamaIndex defaults), and massive community support.
+
+### 5. Objection Handling Scripts
+*   **Customer:** *"But GPT-4o is the smartest model available, why should we use yours?"*
+    *   **Rep Script:** *"GPT-4o is excellent for generic reasoning, but for your specific workflows (e.g., parsing medical records), a model fine-tuned on clinical data runs at 1/10th the cost, provides 99% accuracy, and ensures patient data stays entirely within your VPC. We handle that setup end-to-end."*
+*   **Customer:** *"We want to build on a platform that has a stable future and the biggest ecosystem."*
+    *   **Rep Script:** *"OpenAI has strong backing, but their platform is a black box. API deprecations and rate-limit adjustments can disrupt your production app overnight. By deploying open models with us, you maintain full control and vendor independence."*
+
+### 6. Strategic Warning Signals
+*   **Hiring Focus:** Rapid expansion of Sales Engineering and Enterprise Solutions indicates a heavy push to lock in enterprise clients.
+*   **Product Launches:** Direct integration of Search and Agentic tools into ChatGPT threatens wrapper startups.
+"""
+
+shopify_battlecard = """
+# Shopify Competitive Battlecard
+
+### 1. Company Overview & Positioning Quick-Take
+Shopify is the dominant global commerce platform, positioning itself as the all-in-one operating system for retail merchants, from small online stores to multi-billion dollar enterprise brands.
+
+### 2. Pricing & Packaging Reference
+*   **Basic Plan:** $39/month.
+*   **Shopify Plan:** $105/month.
+*   **Advanced Plan:** $399/month.
+*   **Shopify Plus (Enterprise):** Starts at $2,000/month (or 0.25% of GMV).
+
+### 3. How We Win (Our Strengths vs. Shopify)
+*   **Zero Transaction Fees:** Shopify charges up to 2.0% third-party transaction fees if you don't use Shopify Payments. We offer fee-free processing integrations.
+*   **Completely Headless & Custom:** We provide an un-opinionated API-first checkout flow with no platform constraints, perfect for complex custom layouts.
+*   **Open Database Access:** Shopify keeps database tables closed. We allow full database replication for advanced warehousing and analytics.
+
+### 4. Where We Lose (Shopify's Strengths & Objections)
+*   **App Store & Theme Ecosystem:** Thousands of pre-built integrations, templates, and plugins that non-technical merchants can install in one click.
+*   **Shop Pay Checkout:** Shop Pay is the highest-converting checkout flow on the internet, offering instant one-click buying for millions of users.
+
+### 5. Objection Handling Scripts
+*   **Customer:** *"Shopify's App Store makes it so easy to add features without writing code."*
+    *   **Rep Script:** *"While app stores are great for small stores, as you scale, having 20 different third-party apps slows down your website load speeds and creates security vulnerabilities. Our API-first system builds key features natively, keeping your site fast and conversion rates high."*
+*   **Customer:** *"We need Shop Pay for its conversion benefits."*
+    *   **Rep Script:** *"We support integration with major one-click checkouts (including Bolt and Link) which match Shop Pay's conversion rate. Plus, we don't lock you into a single gateway ecosystem, letting you optimize card processing rates."*
+
+### 6. Strategic Warning Signals
+*   **Hiring Focus:** Significant hiring for Enterprise Sales and Checkout Customization suggests a focus on moving upmarket to compete with Salesforce.
+*   **Product Launches:** Launching 'Sidekick' AI assistant increases the lock-in of retail merchants who use it for copywriting and analytics.
+"""
+
+# --- DATABASE SEEDING ---
+def seed_demo_data():
+    competitors = database.get_all_competitors()
+    comp_names = [c["name"] for c in competitors]
+    
+    # 1. Stripe
+    if "Stripe" not in comp_names:
+        comp_id = database.add_competitor("Stripe", "stripe.com")
+        database.save_scrape(
+            comp_id, 
+            "https://stripe.com/pricing", 
+            "pricing", 
+            "Stripe pricing: Pay-as-you-go 2.9% + 30c per transaction. Custom enterprise rates available.", 
+            "Stripe pricing: Pay-as-you-go 2.9% + 30c per transaction. Custom enterprise rates available."
+        )
+        database.save_scrape(
+            comp_id, 
+            "https://stripe.com/jobs", 
+            "careers", 
+            "Hiring: Staff Machine Learning Engineer - Billing, Enterprise Account Executive.", 
+            "Hiring: Staff Machine Learning Engineer - Billing, Enterprise Account Executive."
+        )
+        stripe_news = [
+            {"title": "Stripe launches billing automation suite powered by AI agent systems", "link": "https://stripe.com/news", "source": "Stripe Newsroom", "date": "1 week ago", "snippet": "Stripe announced a major upgrade to its billing software, adding intelligent dunning, auto-billing optimization, and AI revenue recognition for complex multi-product lines."},
+            {"title": "Stripe processed over $1 trillion in total transaction volume in 2023", "link": "https://bloomberg.com", "source": "Bloomberg", "date": "2 months ago", "snippet": "Payments giant Stripe disclosed it has crossed the milestone of $1 trillion in total transaction volume, growing 25% year-over-year and expanding its enterprise business."},
+            {"title": "Stripe re-introduces crypto payments for merchants starting with USDC", "link": "https://coindesk.com", "source": "CoinDesk", "date": "3 weeks ago", "snippet": "Stripe is returning to cryptocurrency payments, allowing merchants to accept USDC stablecoin payments which will automatically settle in fiat currency in their Stripe accounts."}
+        ]
+        database.save_scrape(
+            comp_id,
+            "https://google.com/search?q=stripe+news",
+            "news",
+            json.dumps(stripe_news),
+            "Stripe News"
+        )
         database.save_analysis(
             comp_id,
             "Battlecard: Stripe",
             "Demo Battlecard showing Stripe positioning, pricing, and objection scripts.",
-            demo_battlecard
-        )
-
-seed_demo_data()
-
-# --- SIDEBAR: CONFIG & LIST ---
-with st.sidebar:
-    st.markdown("<h2>⚡ Configuration</h2>", unsafe_allow_html=True)
-    
-    # Credentials inputs
-    with st.expander("🔑 Bright Data API Keys"):
-        sbr_ws = st.text_input(
-            "Scraping Browser Websocket",
-            value=os.getenv("BRIGHTDATA_SBR_WS_ENDPOINT", ""),
-            type="password",
-            help="CDP endpoint: wss://<username>:<password>@brd.superproxy.io:9222"
-        )
-        serp_key = st.text_input(
-            "API Key",
-            value=os.getenv("BRIGHTDATA_API_KEY", ""),
-            type="password"
-        )
-        serp_zone = st.text_input(
-            "SERP Zone Name",
-            value=os.getenv("BRIGHTDATA_SERP_ZONE", "")
+            stripe_battlecard
         )
         
-        # Save inputs dynamically
-        if sbr_ws:
-            scraper.SBR_WS_ENDPOINT = sbr_ws
-        if serp_key:
-            scraper.BRIGHTDATA_API_KEY = serp_key
-        if serp_zone:
-            scraper.BRIGHTDATA_SERP_ZONE = serp_zone
-            
-    with st.expander("🤖 LLM Configuration"):
-        gemini_key = st.text_input(
-            "Gemini API Key",
-            value=os.getenv("GEMINI_API_KEY", ""),
-            type="password"
+    # 2. OpenAI
+    if "OpenAI" not in comp_names:
+        comp_id = database.add_competitor("OpenAI", "openai.com")
+        database.save_scrape(
+            comp_id, 
+            "https://openai.com/pricing", 
+            "pricing", 
+            "OpenAI pricing: Pay-as-you-go API: GPT-4o at $5/M input tokens, $15/M output tokens. GPT-3.5 turbo deprecating. ChatGPT Plus at $20/month. Enterprise agreements starting at $10k/year minimum commitment.", 
+            "OpenAI pricing: Pay-as-you-go API: GPT-4o at $5/M input tokens, $15/M output tokens. GPT-3.5 turbo deprecating. ChatGPT Plus at $20/month. Enterprise agreements starting at $10k/year minimum commitment."
         )
-        if gemini_key:
-            os.environ["GEMINI_API_KEY"] = gemini_key
-            genai_api = gemini_key # Sync key
-            
-    st.markdown("---")
-    st.markdown("<h2>➕ Add Competitor</h2>", unsafe_allow_html=True)
-    new_name = st.text_input("Competitor Name", placeholder="e.g. Stripe")
-    new_domain = st.text_input("Domain Name", placeholder="e.g. stripe.com")
+        database.save_scrape(
+            comp_id, 
+            "https://openai.com/careers", 
+            "careers", 
+            "Hiring: Member of Technical Staff - Alignment, Developer Advocate, Research Scientist - Multimodal, Sales Engineer.", 
+            "Hiring: Member of Technical Staff - Alignment, Developer Advocate, Research Scientist - Multimodal, Sales Engineer."
+        )
+        openai_news = [
+            {"title": "OpenAI launches GPT-4o with real-time voice intelligence", "link": "https://openai.com/blog/gpt-4o", "source": "OpenAI Blog", "date": "2 weeks ago", "snippet": "GPT-4o ('o' for omni) is our new flagship model that accepts inputs of any combination of text, audio, and image and generates text, audio, and image outputs."},
+            {"title": "OpenAI valuation hits $80 billion in new tender offer deal", "link": "https://nytimes.com", "source": "New York Times", "date": "3 weeks ago", "snippet": "Artificial intelligence startup OpenAI has completed a deal that values the company at $80 billion or more, solidifying its place as one of the world's most valuable tech firms."},
+            {"title": "OpenAI details plans for custom AI agents and enterprise tools", "link": "https://techcrunch.com", "source": "TechCrunch", "date": "1 month ago", "snippet": "OpenAI is expanding ChatGPT's capability to allow developers to create custom versions of ChatGPT, called GPTs, that are tailored for specific tasks and workflows."}
+        ]
+        database.save_scrape(
+            comp_id,
+            "https://google.com/search?q=openai+news",
+            "news",
+            json.dumps(openai_news),
+            "OpenAI News"
+        )
+        database.save_analysis(
+            comp_id,
+            "Battlecard: OpenAI",
+            "Demo Battlecard showing OpenAI positioning, pricing, and objection scripts.",
+            openai_battlecard
+        )
+        
+    # 3. Shopify
+    if "Shopify" not in comp_names:
+        comp_id = database.add_competitor("Shopify", "shopify.com")
+        database.save_scrape(
+            comp_id, 
+            "https://shopify.com/pricing", 
+            "pricing", 
+            "Shopify pricing: Basic Shopify: $39/month. Shopify Plan: $105/month. Advanced: $399/month. Transaction fees: 2.9% + 30c on Basic, reduced to 2.4% on Advanced if using Shopify Payments. Shopify Plus starts at $2,000/month.", 
+            "Shopify pricing: Basic Shopify: $39/month. Shopify Plan: $105/month. Advanced: $399/month. Transaction fees: 2.9% + 30c on Basic, reduced to 2.4% on Advanced if using Shopify Payments. Shopify Plus starts at $2,000/month."
+        )
+        database.save_scrape(
+            comp_id, 
+            "https://shopify.com/jobs", 
+            "careers", 
+            "Hiring: Senior Staff Developer - Checkout, Senior Product Designer - Shop App, Enterprise Merchant Success Manager.", 
+            "Hiring: Senior Staff Developer - Checkout, Senior Product Designer - Shop App, Enterprise Merchant Success Manager."
+        )
+        shopify_news = [
+            {"title": "Shopify reports strong Q1 revenue growth led by Shopify Plus", "link": "https://shopify.com/news", "source": "Shopify Investor Relations", "date": "1 week ago", "snippet": "Shopify Inc. announced financial results for the quarter ended March 31, showing 26% year-over-year revenue expansion and merchant growth across all segments."},
+            {"title": "Shopify expands roll-out of Sidekick AI companion for merchants", "link": "https://techcrunch.com", "source": "TechCrunch", "date": "3 weeks ago", "snippet": "Shopify has started deploying Sidekick, its generative AI chatbot, to help merchants edit store themes, generate product descriptions, and analyze customer behaviors."},
+            {"title": "Shopify Checkout conversions outperform competitors by 15%", "link": "https://retaildive.com", "source": "Retail Dive", "date": "1 month ago", "snippet": "A new study conducted by a global consulting firm shows Shopify's checkout conversion rate exceeds other major e-commerce platforms, driven by Shop Pay's one-click checkout."}
+        ]
+        database.save_scrape(
+            comp_id,
+            "https://google.com/search?q=shopify+news",
+            "news",
+            json.dumps(shopify_news),
+            "Shopify News"
+        )
+        database.save_analysis(
+            comp_id,
+            "Battlecard: Shopify",
+            "Demo Battlecard showing Shopify positioning, pricing, and objection scripts.",
+            shopify_battlecard
+        )
+
+# Seed on load
+seed_demo_data()
+
+# Initialize session states
+if "show_settings" not in st.session_state:
+    st.session_state.show_settings = False
+
+# --- COLLAPSIBLE SIDEBAR WITH HAMBURGER TOGGLE ---
+with st.sidebar:
+    st.markdown("""
+        <div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;'>
+            <h2 style='margin: 0;'>⚡ Dashboard</h2>
+        </div>
+    """, unsafe_allow_html=True)
     
-    if st.button("Add to Monitor"):
-        if new_name and new_domain:
-            database.add_competitor(new_name, new_domain)
-            st.success(f"Added {new_name} to database!")
-            st.rerun()
-        else:
-            st.error("Please fill in both fields.")
+    # Gear / settings toggle button
+    settings_icon = "⚙️ Collapse Setup Panels" if st.session_state.show_settings else "⚙️ Expand Setup / API Keys"
+    if st.button(settings_icon, use_container_width=True):
+        st.session_state.show_settings = not st.session_state.show_settings
+        st.rerun()
+        
+    st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
+
+    # Conditionally display Configuration section
+    if st.session_state.show_settings:
+        st.markdown("<h3>🔑 Configuration</h3>", unsafe_allow_html=True)
+        # Credentials inputs
+        with st.expander("🔑 Bright Data API Keys", expanded=True):
+            sbr_ws = st.text_input(
+                "Scraping Browser Websocket",
+                value=os.getenv("BRIGHTDATA_SBR_WS_ENDPOINT", ""),
+                type="password",
+                help="CDP endpoint: wss://<username>:<password>@brd.superproxy.io:9222"
+            )
+            serp_key = st.text_input(
+                "API Key",
+                value=os.getenv("BRIGHTDATA_API_KEY", ""),
+                type="password"
+            )
+            serp_zone = st.text_input(
+                "SERP Zone Name",
+                value=os.getenv("BRIGHTDATA_SERP_ZONE", "")
+            )
             
-    st.markdown("---")
-    st.markdown("<h2>📋 Monitored Competitors</h2>", unsafe_allow_html=True)
+            # Save inputs dynamically
+            if sbr_ws:
+                scraper.SBR_WS_ENDPOINT = sbr_ws
+            if serp_key:
+                scraper.BRIGHTDATA_API_KEY = serp_key
+            if serp_zone:
+                scraper.BRIGHTDATA_SERP_ZONE = serp_zone
+                
+        with st.expander("🤖 LLM Configuration", expanded=True):
+            gemini_key = st.text_input(
+                "Gemini API Key",
+                value=os.getenv("GEMINI_API_KEY", ""),
+                type="password"
+            )
+            if gemini_key:
+                os.environ["GEMINI_API_KEY"] = gemini_key
+                
+        st.markdown("<hr style='margin: 15px 0;'>", unsafe_allow_html=True)
+        st.markdown("<h3>➕ Add Competitor</h3>", unsafe_allow_html=True)
+        new_name = st.text_input("Competitor Name", placeholder="e.g. Stripe")
+        new_domain = st.text_input("Domain Name", placeholder="e.g. stripe.com")
+        
+        if st.button("Add to Monitor", use_container_width=True):
+            if new_name and new_domain:
+                database.add_competitor(new_name, new_domain)
+                st.success(f"Added {new_name} to database!")
+                st.session_state.selected_competitor_name = new_name
+                st.rerun()
+            else:
+                st.error("Please fill in both fields.")
+        st.markdown("<hr style='margin: 15px 0;'>", unsafe_allow_html=True)
+
+    # Monitored Competitors list is always visible
+    st.markdown("<h3>📋 Monitored Competitors</h3>", unsafe_allow_html=True)
     competitors = database.get_all_competitors()
     
     if competitors:
         comp_names = [c["name"] for c in competitors]
-        selected_name = st.radio("Select Competitor to View", comp_names)
+        if "selected_competitor_name" not in st.session_state or st.session_state.selected_competitor_name not in comp_names:
+            st.session_state.selected_competitor_name = comp_names[0]
+            
+        selected_index = comp_names.index(st.session_state.selected_competitor_name)
+        selected_name = st.radio("Select Competitor to View", comp_names, index=selected_index)
+        st.session_state.selected_competitor_name = selected_name
         selected_competitor = next(c for c in competitors if c["name"] == selected_name)
     else:
         st.write("No competitors added yet.")
         selected_competitor = None
 
 # --- MAIN DASHBOARD INTERFACE ---
-st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>⚡ CompetitorPulse</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; font-size: 1.15rem; color: #94a3b8; margin-top: -20px; margin-bottom: 40px;'>Autonomous GTM Intelligence Agent powered by Bright Data & Gemini</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; margin-bottom: 20px; font-family: \"Outfit\", sans-serif; font-size: 2.8rem;'>⚡ CompetitorPulse</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 1.15rem; color: #64748b; margin-top: -15px; margin-bottom: 30px;'>Autonomous GTM Intelligence Agent powered by Bright Data & Gemini</p>", unsafe_allow_html=True)
 
+# --- TRACK B & C: GETTING STARTED / FEATURED EXAMPLES + SVG DIAGRAM ---
+svg_diagram = """
+<div style="width: 100%; display: flex; justify-content: center;">
+<svg viewBox="0 0 850 250" xmlns="http://www.w3.org/2000/svg" style="background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; width:100%; height:auto; box-shadow:0 10px 30px rgba(0,0,0,0.03); padding:12px; margin: 0 auto;">
+  <style>
+    @keyframes flow {
+      0% { stroke-dashoffset: 0; }
+      100% { stroke-dashoffset: -40; }
+    }
+    .flow-path-active {
+      stroke: #0d9488;
+      stroke-width: 2.5;
+      stroke-dasharray: 6, 4;
+      animation: flow 1.2s linear infinite;
+    }
+    .node-group {
+      cursor: pointer;
+    }
+    .node-bg {
+      fill: #ffffff;
+      stroke: #e2e8f0;
+      stroke-width: 2;
+      transition: all 0.3s ease;
+    }
+    .node-group:hover .node-bg {
+      stroke: #0d9488;
+      fill: #f0fdfa;
+      filter: drop-shadow(0 4px 8px rgba(13, 148, 136, 0.1));
+    }
+    .node-title {
+      font-family: 'Outfit', 'Inter', sans-serif;
+      font-size: 13px;
+      fill: #0f172a;
+      font-weight: 700;
+    }
+    .node-desc {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      fill: #64748b;
+    }
+    .icon {
+      font-size: 22px;
+    }
+  </style>
+
+  <!-- Connection Lines -->
+  <path d="M 160 65 L 240 65" class="flow-path-active" />
+  <path d="M 160 185 L 240 185" class="flow-path-active" />
+  <path d="M 380 65 C 410 65, 420 125, 440 125" class="flow-path-active" />
+  <path d="M 380 185 C 410 185, 420 125, 440 125" class="flow-path-active" />
+  <path d="M 600 125 L 660 125" class="flow-path-active" />
+
+  <!-- 1. DATA SOURCES -->
+  <g class="node-group" transform="translate(20, 20)">
+    <rect x="0" y="0" width="140" height="90" rx="12" class="node-bg" />
+    <text x="15" y="35" class="icon">📄</text>
+    <text x="15" y="60" class="node-title">Target Sites</text>
+    <text x="15" y="75" class="node-desc">Pricing & Careers pages</text>
+  </g>
+  <g class="node-group" transform="translate(20, 140)">
+    <rect x="0" y="0" width="140" height="90" rx="12" class="node-bg" />
+    <text x="15" y="35" class="icon">📰</text>
+    <text x="15" y="60" class="node-title">Google News</text>
+    <text x="15" y="75" class="node-desc">Live search indexes & PR</text>
+  </g>
+
+  <!-- 2. BRIGHT DATA PIPELINE -->
+  <g class="node-group" transform="translate(240, 20)">
+    <rect x="0" y="0" width="140" height="90" rx="12" class="node-bg" />
+    <text x="15" y="35" class="icon">🌐</text>
+    <text x="15" y="60" class="node-title">Scraping Browser</text>
+    <text x="15" y="75" class="node-desc">Playwright CDP scrapers</text>
+  </g>
+  <g class="node-group" transform="translate(240, 140)">
+    <rect x="0" y="0" width="140" height="90" rx="12" class="node-bg" />
+    <text x="15" y="35" class="icon">🔍</text>
+    <text x="15" y="60" class="node-title">Bright Data SERP</text>
+    <text x="15" y="75" class="node-desc">Real-time search results</text>
+  </g>
+
+  <!-- 3. AI AGENTS ENGINE -->
+  <g class="node-group" transform="translate(440, 70)">
+    <rect x="0" y="0" width="160" height="110" rx="16" class="node-bg" style="stroke: #0d9488; fill: #f0fdfa;" />
+    <text x="20" y="38" class="icon">🧠</text>
+    <text x="20" y="65" class="node-title">Multi-Agent Engine</text>
+    <text x="20" y="82" class="node-desc">Web Crawler, SERP Analyst,</text>
+    <text x="20" y="94" class="node-desc">& Intelligence Synthesizer</text>
+  </g>
+
+  <!-- 4. LIVE DASHBOARD -->
+  <g class="node-group" transform="translate(660, 70)">
+    <rect x="0" y="0" width="160" height="110" rx="16" class="node-bg" />
+    <text x="20" y="38" class="icon">📊</text>
+    <text x="20" y="65" class="node-title">Insights Hub</text>
+    <text x="20" y="82" class="node-desc">Premium light battlecard,</text>
+    <text x="20" y="94" class="node-desc">hiring charts & news diffs</text>
+  </g>
+</svg>
+</div>
+"""
+
+with st.container(border=True):
+    st.markdown("### 🚀 Getting Started & Featured Examples")
+    st.markdown(
+        "Welcome to **CompetitorPulse**! This agent autonomously crawls target domains (using Bright Data Scraping Browser) and searches global news (using Bright Data SERP API) to generate sales battlecards, analyze hiring patterns, and track market updates."
+    )
+    
+    col_usecase, col_diagram = st.columns([5, 7])
+    
+    with col_usecase:
+        st.markdown("**Select a Featured Sector Use Case to Load Demo Intelligence:**")
+        
+        # Calculate index based on session state selection
+        current_sel = st.session_state.get("selected_competitor_name", "Stripe")
+        default_idx = 0
+        if current_sel == "OpenAI":
+            default_idx = 1
+        elif current_sel == "Shopify":
+            default_idx = 2
+            
+        sector_option = st.radio(
+            "Examples:",
+            [
+                "💳 Fintech / API Billing (Stripe)",
+                "🤖 Frontier AI Platform (OpenAI)",
+                "🛒 E-Commerce & Checkout SaaS (Shopify)"
+            ],
+            index=default_idx,
+            label_visibility="collapsed"
+        )
+        
+        # Parse selected competitor details
+        target_name = "Stripe"
+        if "OpenAI" in sector_option:
+            target_name = "OpenAI"
+        elif "Shopify" in sector_option:
+            target_name = "Shopify"
+            
+        if st.button(f"⚡ Load {target_name} Demo Data", use_container_width=True):
+            seed_demo_data()
+            st.session_state.selected_competitor_name = target_name
+            st.success(f"Switched dashboard to {target_name}!")
+            st.rerun()
+            
+    with col_diagram:
+        st.markdown(svg_diagram, unsafe_allow_html=True)
+
+st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+
+# --- RENDER MONITORED COMPETITOR METRICS & TABS ---
 if selected_competitor:
     comp_id = selected_competitor["id"]
     comp_name = selected_competitor["name"]
     comp_domain = selected_competitor["domain"]
     
-    # Header Info
+    # Header Card
     st.markdown(f"""
     <div class='glass-card'>
-        <div style='display: flex; justify-content: space-between; align-items: center;'>
+        <div style='display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;'>
             <div>
-                <h2 style='margin: 0;'>🔍 Monitoring: {comp_name}</h2>
-                <p style='margin: 5px 0 0 0; color: #94a3b8;'>Domain: <a href='https://{comp_domain}' target='_blank' style='color: #00f5d4;'>{comp_domain}</a> | Last updated: {selected_competitor['updated_at']}</p>
+                <h2 style='margin: 0; font-family: "Outfit", sans-serif; color: #0f172a;'>🔍 Monitoring: {comp_name}</h2>
+                <p style='margin: 5px 0 0 0; color: #64748b;'>Domain: <a href='https://{comp_domain}' target='_blank' style='color: #0d9488 !important;'>{comp_domain}</a> | Last updated: {selected_competitor['updated_at']}</p>
             </div>
             <div>
     """, unsafe_allow_html=True)
@@ -558,35 +894,42 @@ if selected_competitor:
         ])
         
         with tab1:
-            st.markdown(f"<div class='glass-card'>{latest_analysis['battlecard_md']}</div>", unsafe_allow_html=True)
+            with st.container(border=True):
+                st.markdown(latest_analysis['battlecard_md'])
             
         with tab2:
             st.markdown("### Market Analyst Agent Findings")
-            # We display the analyst notes which is stored inside database scrapes or reports
-            # Since the analyst notes gets saved during analysis in scraped or reports, let's load crawled raw representation.
             latest_crawl_text = latest_pricing["raw_content"] if latest_pricing else "No recent crawl."
             
-            # Let's show a simulated hiring breakdown chart to wow the user!
+            # Simulated hiring breakdown chart to match light template
             st.markdown("#### Competitor Department Hiring Focus (AI Inference)")
-            hiring_data = {
-                "Department": ["AI & ML Engineering", "Core Engineering", "Enterprise Sales", "Product Management", "Operations"],
-                "Job Openings": [12, 18, 14, 5, 8]
-            }
-            if comp_name.lower() != "stripe":
+            
+            if comp_name.lower() == "stripe":
+                job_openings = [12, 18, 14, 5, 8]
+            elif comp_name.lower() == "openai":
+                job_openings = [28, 22, 15, 8, 4]
+            elif comp_name.lower() == "shopify":
+                job_openings = [10, 24, 18, 12, 15]
+            else:
                 import random
-                hiring_data["Job Openings"] = [random.randint(1, 10) for _ in range(5)]
+                job_openings = [random.randint(1, 15) for _ in range(5)]
                 
-            df = pd.DataFrame(hiring_data)
+            df = pd.DataFrame({
+                "Department": ["AI & ML Engineering", "Core Engineering", "Enterprise Sales", "Product Management", "Operations"],
+                "Job Openings": job_openings
+            })
+            
             fig = px.bar(
                 df, x="Department", y="Job Openings", 
                 color="Job Openings", 
-                color_continuous_scale="Viridis",
-                template="plotly_dark"
+                color_continuous_scale="Teal",
+                template="plotly_white"
             )
             fig.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
-                coloraxis_showscale=False
+                coloraxis_showscale=False,
+                margin=dict(l=10, r=10, t=10, b=10)
             )
             st.plotly_chart(fig, use_container_width=True)
             
@@ -613,10 +956,10 @@ if selected_competitor:
                     news_list = json.loads(latest_news["raw_content"])
                     for item in news_list:
                         st.markdown(f"""
-                        <div class='glass-card' style='padding: 15px; margin-bottom: 12px;'>
-                            <h4 style='margin: 0;'><a href='{item["link"]}' target='_blank' style='color: #00f5d4;'>{item["title"]}</a></h4>
-                            <p style='margin: 5px 0; font-size: 0.85rem; color: #94a3b8;'>Source: {item["source"]} | Date: {item["date"]}</p>
-                            <p style='margin: 0; font-size: 0.95rem;'>{item["snippet"]}</p>
+                        <div class='glass-card' style='padding: 18px; margin-bottom: 12px;'>
+                            <h4 style='margin: 0;'><a href='{item["link"]}' target='_blank' style='color: #0d9488 !important;'>{item["title"]}</a></h4>
+                            <p style='margin: 5px 0; font-size: 0.85rem; color: #64748b;'>Source: <strong>{item["source"]}</strong> | Date: {item["date"]}</p>
+                            <p style='margin: 0; font-size: 0.95rem; color: #334155;'>{item["snippet"]}</p>
                         </div>
                         """, unsafe_allow_html=True)
                 except Exception:
@@ -636,10 +979,12 @@ if selected_competitor:
                 comp_col1, comp_col2 = st.columns(2)
                 with comp_col1:
                     st.markdown(f"#### Historical Battlecard ({selected_date})")
-                    st.markdown(f"<div style='border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; max-height: 500px; overflow-y: scroll;'>{selected_hist['battlecard_md']}</div>", unsafe_allow_html=True)
+                    with st.container(border=True):
+                        st.markdown(selected_hist['battlecard_md'])
                 with comp_col2:
                     st.markdown("#### Current Battlecard (Latest)")
-                    st.markdown(f"<div style='border: 1px solid #00f5d4; padding: 15px; border-radius: 8px; max-height: 500px; overflow-y: scroll;'>{latest_analysis['battlecard_md']}</div>", unsafe_allow_html=True)
+                    with st.container(border=True):
+                        st.markdown(latest_analysis['battlecard_md'])
             else:
                 st.info("Run multiple scans over time to see comparative histories and detect diffs!")
                 
