@@ -129,7 +129,7 @@ competitor-pulse/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/CompetitorPulse.git
+git clone https://github.com/ahmed13576/CompetitorPulse.git
 cd CompetitorPulse
 ```
 
