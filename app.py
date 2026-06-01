@@ -11,18 +11,18 @@ import database
 import scraper
 from agents import CompetitorIntelligenceSystem
 
-# Set Streamlit Page Config
+# Set Streamlit Page Config — NO sidebar
 st.set_page_config(
     page_title="CompetitorPulse | Autonomous GTM Intelligence",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # Initialize Database
 database.init_db()
 
-# --- CUSTOM CSS FOR PREMIUM LIGHT DESIGN ---
+# --- CUSTOM CSS FOR PREMIUM LIGHT DESIGN (NO SIDEBAR) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@500;700&display=swap');
@@ -31,6 +31,15 @@ st.markdown("""
     .stApp {
         background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         color: #334155;
+    }
+
+    /* ===== HIDE SIDEBAR COMPLETELY ===== */
+    section[data-testid="stSidebar"] {
+        display: none !important;
+    }
+    button[data-testid="stSidebarToggle"],
+    [data-testid="stSidebarCollapsedControl"] {
+        display: none !important;
     }
 
     /* Kill the header / toolbar bar at the very top */
@@ -69,94 +78,6 @@ st.markdown("""
     }
     a:hover {
         text-decoration: underline;
-    }
-
-    /* ===== SIDEBAR ===== */
-    section[data-testid="stSidebar"] {
-        background: #ffffff !important;
-        border-right: 1px solid #e2e8f0 !important;
-    }
-
-
-
-    /* Force ALL sidebar text to be slate */
-    section[data-testid="stSidebar"] * {
-        color: #475569 !important;
-    }
-    section[data-testid="stSidebar"] h1,
-    section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3 {
-        color: #0f172a !important;
-    }
-    section[data-testid="stSidebar"] button,
-    section[data-testid="stSidebar"] button * {
-        color: #ffffff !important;
-    }
-
-    /* Sidebar labels */
-    section[data-testid="stSidebar"] label,
-    section[data-testid="stSidebar"] .stTextInput label,
-    section[data-testid="stSidebar"] [data-testid="stWidgetLabel"] {
-        color: #64748b !important;
-        font-size: 0.85rem;
-        font-weight: 600;
-        letter-spacing: 0.02em;
-    }
-
-    /* Sidebar expanders */
-    section[data-testid="stSidebar"] [data-testid="stExpander"] {
-        background: #ffffff !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 10px !important;
-        margin-bottom: 8px;
-    }
-    section[data-testid="stSidebar"] [data-testid="stExpander"] summary,
-    section[data-testid="stSidebar"] [data-testid="stExpander"] summary span,
-    section[data-testid="stSidebar"] [data-testid="stExpander"] summary p {
-        color: #1e293b !important;
-        font-weight: 600;
-    }
-    section[data-testid="stSidebar"] [data-testid="stExpander"] svg {
-        fill: #0d9488 !important;
-        color: #0d9488 !important;
-    }
-
-    /* Sidebar radio buttons */
-    section[data-testid="stSidebar"] .stRadio label span,
-    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label {
-        color: #475569 !important;
-    }
-    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label[data-selected="true"],
-    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:hover {
-        color: #0d9488 !important;
-    }
-
-    /* Sidebar inputs */
-    section[data-testid="stSidebar"] input,
-    section[data-testid="stSidebar"] textarea {
-        background: #f8fafc !important;
-        color: #1e293b !important;
-        border: 1px solid #cbd5e1 !important;
-        border-radius: 8px !important;
-    }
-    section[data-testid="stSidebar"] input:focus,
-    section[data-testid="stSidebar"] textarea:focus {
-        border-color: #0d9488 !important;
-        box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.15) !important;
-    }
-    section[data-testid="stSidebar"] input::placeholder {
-        color: #94a3b8 !important;
-    }
-
-    /* Sidebar horizontal rules */
-    section[data-testid="stSidebar"] hr {
-        border-color: #e2e8f0 !important;
-    }
-
-    /* Sidebar success/error messages */
-    section[data-testid="stSidebar"] .stAlert {
-        background: #f0fdfa !important;
-        border-radius: 8px;
     }
 
     /* ===== MAIN CONTENT INPUTS ===== */
@@ -559,86 +480,13 @@ def seed_demo_data():
 # Seed on load
 seed_demo_data()
 
-# --- ALWAYS EXPANDED SIDEBAR CONFIGURATION ---
-with st.sidebar:
-    st.markdown("""
-        <div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;'>
-            <h2 style='margin: 0; font-family: "Outfit", sans-serif;'>⚡ CompetitorPulse</h2>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("<h3>🔑 Configuration</h3>", unsafe_allow_html=True)
-    
-    # Credentials inputs
-    with st.expander("🔑 Bright Data API Keys", expanded=True):
-        sbr_ws = st.text_input(
-            "Scraping Browser Websocket",
-            value=os.getenv("BRIGHTDATA_SBR_WS_ENDPOINT", ""),
-            type="password",
-            help="CDP endpoint: wss://<username>:<password>@brd.superproxy.io:9222"
-        )
-        serp_key = st.text_input(
-            "API Key",
-            value=os.getenv("BRIGHTDATA_API_KEY", ""),
-            type="password"
-        )
-        serp_zone = st.text_input(
-            "SERP Zone Name",
-            value=os.getenv("BRIGHTDATA_SERP_ZONE", "")
-        )
-        
-        # Save inputs dynamically
-        if sbr_ws:
-            scraper.SBR_WS_ENDPOINT = sbr_ws
-        if serp_key:
-            scraper.BRIGHTDATA_API_KEY = serp_key
-        if serp_zone:
-            scraper.BRIGHTDATA_SERP_ZONE = serp_zone
-            
-    with st.expander("🤖 LLM Configuration", expanded=True):
-        gemini_key = st.text_input(
-            "Gemini API Key",
-            value=os.getenv("GEMINI_API_KEY", ""),
-            type="password"
-        )
-        if gemini_key:
-            os.environ["GEMINI_API_KEY"] = gemini_key
-            
-    with st.expander("➕ Add Competitor", expanded=False):
-        new_name = st.text_input("Competitor Name", placeholder="e.g. Stripe")
-        new_domain = st.text_input("Domain Name", placeholder="e.g. stripe.com")
-        
-        if st.button("Add to Monitor", width='stretch'):
-            if new_name and new_domain:
-                database.add_competitor(new_name, new_domain)
-                st.success(f"Added {new_name} to database!")
-                st.session_state.selected_competitor_name = new_name
-                st.rerun()
-            else:
-                st.error("Please fill in both fields.")
-                
-    st.markdown("<hr style='margin: 15px 0;'>", unsafe_allow_html=True)
-    st.markdown("<h3>📋 Monitored Competitors</h3>", unsafe_allow_html=True)
-    competitors = database.get_all_competitors()
-    
-    if competitors:
-        comp_names = [c["name"] for c in competitors]
-        if "selected_competitor_name" not in st.session_state or st.session_state.selected_competitor_name not in comp_names:
-            st.session_state.selected_competitor_name = comp_names[0]
-            
-        selected_index = comp_names.index(st.session_state.selected_competitor_name)
-        selected_name = st.radio("Select Competitor to View", comp_names, index=selected_index)
-        st.session_state.selected_competitor_name = selected_name
-        selected_competitor = next(c for c in competitors if c["name"] == selected_name)
-    else:
-        st.write("No competitors added yet.")
-        selected_competitor = None
+
 
 # --- MAIN DASHBOARD INTERFACE ---
 st.markdown("<h1 style='text-align: center; margin-bottom: 20px; font-family: \"Outfit\", sans-serif; font-size: 2.8rem;'>⚡ CompetitorPulse</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; font-size: 1.15rem; color: #64748b; margin-top: -15px; margin-bottom: 30px;'>Autonomous GTM Intelligence Agent powered by Bright Data & Gemini</p>", unsafe_allow_html=True)
 
-# --- TRACK B & C: GETTING STARTED / FEATURED EXAMPLES + SVG DIAGRAM ---
+# --- DATA FLOW SVG DIAGRAM ---
 svg_diagram = """
 <div style="width: 100%; display: flex; justify-content: center;">
 <svg viewBox="0 0 850 250" xmlns="http://www.w3.org/2000/svg" style="background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; width:100%; height:auto; box-shadow:0 10px 30px rgba(0,0,0,0.03); padding:12px; margin: 0 auto;">
@@ -739,6 +587,7 @@ svg_diagram = """
 </div>
 """
 
+# --- GETTING STARTED / FEATURED EXAMPLES + SVG DIAGRAM ---
 with st.container(border=True):
     st.markdown("### 🚀 Getting Started & Featured Examples")
     st.markdown(
@@ -787,7 +636,7 @@ with st.container(border=True):
 
 st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
-# --- TRACK B: CREATE/START A NEW PROJECT FROM SCRATCH ---
+# --- MONITOR A NEW COMPETITOR FROM SCRATCH ---
 with st.container(border=True):
     st.markdown("### ➕ Monitor a New Competitor from Scratch")
     st.markdown("Ready to analyze a new competitor? Enter their name and domain below to add them to your monitored list and start a fresh tracking project:")
@@ -807,6 +656,96 @@ with st.container(border=True):
                 st.rerun()
             else:
                 st.error("Please fill in both fields.")
+
+st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+
+# --- INLINE SETTINGS & API CREDENTIALS (replaces sidebar) ---
+with st.container(border=True):
+    st.markdown("### ⚙️ Settings & API Credentials")
+    st.markdown("Configure your API keys and select which competitor to monitor. All credentials are stored only in your session.")
+    
+    cfg_col1, cfg_col2, cfg_col3 = st.columns(3)
+    
+    with cfg_col1:
+        st.markdown("##### 🔑 Bright Data")
+        sbr_ws = st.text_input(
+            "Scraping Browser Websocket",
+            value=os.getenv("BRIGHTDATA_SBR_WS_ENDPOINT", ""),
+            type="password",
+            help="CDP endpoint: wss://<username>:<password>@brd.superproxy.io:9222",
+            key="cfg_sbr_ws"
+        )
+        serp_key = st.text_input(
+            "API Key",
+            value=os.getenv("BRIGHTDATA_API_KEY", ""),
+            type="password",
+            key="cfg_serp_key"
+        )
+        serp_zone = st.text_input(
+            "SERP Zone Name",
+            value=os.getenv("BRIGHTDATA_SERP_ZONE", ""),
+            key="cfg_serp_zone"
+        )
+    
+    with cfg_col2:
+        st.markdown("##### 🤖 LLM Configuration")
+        llm_provider = st.selectbox(
+            "LLM Provider",
+            ["Groq (Recommended — 10x free quota)", "Gemini"],
+            index=0,
+            key="cfg_llm_provider",
+            help="Groq offers 14,400 free requests/day vs Gemini's ~1,500"
+        )
+        # Store normalised provider name
+        if "Groq" in llm_provider:
+            st.session_state["llm_provider"] = "groq"
+        else:
+            st.session_state["llm_provider"] = "gemini"
+        
+        gemini_key = st.text_input(
+            "Gemini API Key",
+            value=os.getenv("GEMINI_API_KEY", ""),
+            type="password",
+            key="cfg_gemini_key",
+            help="Required if using Gemini provider"
+        )
+        if gemini_key:
+            os.environ["GEMINI_API_KEY"] = gemini_key
+        
+        groq_key = st.text_input(
+            "Groq API Key",
+            value=os.getenv("GROQ_API_KEY", ""),
+            type="password",
+            key="cfg_groq_key",
+            help="Free at console.groq.com — 14,400 RPD"
+        )
+        if groq_key:
+            os.environ["GROQ_API_KEY"] = groq_key
+    
+    with cfg_col3:
+        st.markdown("##### 📋 Monitored Competitors")
+        competitors = database.get_all_competitors()
+        
+        if competitors:
+            comp_names = [c["name"] for c in competitors]
+            if "selected_competitor_name" not in st.session_state or st.session_state.selected_competitor_name not in comp_names:
+                st.session_state.selected_competitor_name = comp_names[0]
+                
+            selected_index = comp_names.index(st.session_state.selected_competitor_name)
+            selected_name = st.radio("Select Competitor to View", comp_names, index=selected_index, key="cfg_comp_radio")
+            st.session_state.selected_competitor_name = selected_name
+            selected_competitor = next(c for c in competitors if c["name"] == selected_name)
+        else:
+            st.write("No competitors added yet.")
+            selected_competitor = None
+
+# Sync credentials to modules
+if sbr_ws:
+    scraper.SBR_WS_ENDPOINT = sbr_ws
+if serp_key:
+    scraper.BRIGHTDATA_API_KEY = serp_key
+if serp_zone:
+    scraper.BRIGHTDATA_SERP_ZONE = serp_zone
 
 st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
 
@@ -836,9 +775,11 @@ if selected_competitor:
     
     # Trigger Scan Execution
     if trigger_scan:
-        # Sync credentials from sidebar text inputs explicitly
+        # Sync credentials explicitly
         if gemini_key:
             os.environ["GEMINI_API_KEY"] = gemini_key
+        if groq_key:
+            os.environ["GROQ_API_KEY"] = groq_key
         if sbr_ws:
             scraper.SBR_WS_ENDPOINT = sbr_ws
             os.environ["BRIGHTDATA_SBR_WS_ENDPOINT"] = sbr_ws
@@ -848,22 +789,30 @@ if selected_competitor:
         if serp_zone:
             scraper.BRIGHTDATA_SERP_ZONE = serp_zone
             os.environ["BRIGHTDATA_SERP_ZONE"] = serp_zone
+        
+        # Determine which provider is selected
+        active_provider = st.session_state.get("llm_provider", "groq")
             
         # Check if keys are configured
-        gemini_key_missing = not os.getenv("GEMINI_API_KEY")
+        if active_provider == "groq":
+            llm_key_missing = not os.getenv("GROQ_API_KEY")
+            llm_key_label = "Groq API Key"
+        else:
+            llm_key_missing = not os.getenv("GEMINI_API_KEY")
+            llm_key_label = "Gemini API Key"
         sbr_ws_missing = not scraper.SBR_WS_ENDPOINT
         serp_key_missing = not scraper.BRIGHTDATA_API_KEY
         
-        if gemini_key_missing or sbr_ws_missing or serp_key_missing:
+        if llm_key_missing or sbr_ws_missing or serp_key_missing:
             missing_fields = []
-            if gemini_key_missing:
-                missing_fields.append("Gemini API Key")
+            if llm_key_missing:
+                missing_fields.append(llm_key_label)
             if sbr_ws_missing:
                 missing_fields.append("Bright Data Scraping Browser Websocket")
             if serp_key_missing:
                 missing_fields.append("Bright Data API Key (SERP)")
                 
-            st.error(f"Missing required API credentials: {', '.join(missing_fields)}. Please configure them in the sidebar configuration first!")
+            st.error(f"Missing required API credentials: {', '.join(missing_fields)}. Please configure them in the Settings & API Credentials section above.")
         else:
             progress_bar = st.progress(0)
             status_text = st.empty()
@@ -873,7 +822,7 @@ if selected_competitor:
                 status_text.markdown(f"**Agent Status:** *{text}*")
                 
             try:
-                system = CompetitorIntelligenceSystem()
+                system = CompetitorIntelligenceSystem(provider=active_provider)
                 # Run the async pipeline synchronously in streamlit context
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
@@ -971,7 +920,7 @@ if selected_competitor:
                 coloraxis_showscale=False,
                 margin=dict(l=10, r=10, t=10, b=10)
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
             st.info("The chart above shows an inferred distribution of open headcounts by crawling their jobs board via Playwright CDP.")
             
@@ -1029,8 +978,6 @@ if selected_competitor:
                 st.info("Run multiple scans over time to see comparative histories and detect diffs!")
                 
     else:
-        st.info("No scans have been performed for this competitor yet. Add your credentials in the sidebar and click 'Scan & Analyze' to initiate the autonomous multi-agent pipeline!")
+        st.info("No scans have been performed for this competitor yet. Configure your API credentials above and click '🔄 Scan & Analyze' to initiate the autonomous multi-agent pipeline!")
 else:
-    st.info("No competitor selected. Please add a competitor in the sidebar to begin monitoring.")
-
-
+    st.info("No competitor selected. Please add a competitor above or load a demo to begin monitoring.")

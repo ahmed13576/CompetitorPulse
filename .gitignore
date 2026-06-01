@@ -29,3 +29,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Test / scratch scripts
+verify_scan.py
+
+# Screenshots
+*.png

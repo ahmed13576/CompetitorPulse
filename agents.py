@@ -1,28 +1,96 @@
 import os
 import json
-import google.generativeai as genai
+import time
 from dotenv import load_dotenv
 from scraper import smart_scrape, search_news_serp
 import database
 
 load_dotenv()
 
-# Initialize Gemini API
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-else:
-    # If no key in environment, we will check Streamlit secrets or raise warning
-    print("Warning: GEMINI_API_KEY is not set in environment variables.")
+# ---------------------------------------------------------------------------
+# LLM Provider Abstraction
+# ---------------------------------------------------------------------------
+
+GEMINI_FALLBACK_MODELS = [
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
+]
+
+GROQ_FALLBACK_MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-70b-versatile",
+    "llama-3.1-8b-instant",
+]
+
+
+def _call_with_retry(call_fn, models: list[str], max_retries: int = 3) -> str:
+    """Try each model in order; retry with backoff on rate-limit errors."""
+    last_error = None
+    for model_name in models:
+        for attempt in range(max_retries):
+            try:
+                return call_fn(model_name)
+            except Exception as e:
+                last_error = e
+                err_str = str(e)
+                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "rate_limit" in err_str.lower():
+                    wait = min(2 ** attempt * 15, 60)
+                    print(f"[Rate-limited on {model_name}] Retry {attempt+1}/{max_retries} in {wait}s...")
+                    time.sleep(wait)
+                else:
+                    raise
+        print(f"[Quota exhausted for {model_name}] Falling back to next model...")
+    raise RuntimeError(f"All models exhausted. Last error: {last_error}")
+
 
 class CompetitorIntelligenceSystem:
-    def __init__(self):
-        # We use gemini-1.5-flash as default because it is fast, highly capable, and cost-efficient
-        self.model_name = "gemini-1.5-flash"
-        
-    def _get_model(self):
-        return genai.GenerativeModel(self.model_name)
-        
+    """Multi-provider LLM system supporting Gemini and Groq."""
+
+    def __init__(self, provider: str = "gemini"):
+        self.provider = provider.lower()
+
+        if self.provider == "groq":
+            from groq import Groq
+            api_key = os.getenv("GROQ_API_KEY", "")
+            if not api_key:
+                raise ValueError("GROQ_API_KEY is not set. Get one free at https://console.groq.com")
+            self.groq_client = Groq(api_key=api_key)
+            self.models = list(GROQ_FALLBACK_MODELS)
+        else:
+            from google import genai
+            api_key = os.getenv("GEMINI_API_KEY", "")
+            if not api_key:
+                print("Warning: GEMINI_API_KEY is not set.")
+            self.gemini_client = genai.Client(api_key=api_key)
+            self.models = list(GEMINI_FALLBACK_MODELS)
+
+    # ---- internal generators per provider ----
+
+    def _gemini_call(self, prompt: str, model: str) -> str:
+        response = self.gemini_client.models.generate_content(
+            model=model,
+            contents=prompt,
+        )
+        return response.text
+
+    def _groq_call(self, prompt: str, model: str) -> str:
+        response = self.groq_client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+            max_tokens=4096,
+        )
+        return response.choices[0].message.content
+
+    # ---- public interface ----
+
+    def _generate(self, prompt: str) -> str:
+        if self.provider == "groq":
+            return _call_with_retry(lambda m: self._groq_call(prompt, m), self.models)
+        else:
+            return _call_with_retry(lambda m: self._gemini_call(prompt, m), self.models)
+
     async def run_analysis(self, competitor_id: int, competitor_name: str, domain: str, progress_callback=None) -> dict:
         """
         Executes the autonomous agentic pipeline:
@@ -98,10 +166,8 @@ class CompetitorIntelligenceSystem:
         Provide your output as a clean structured Markdown report.
         """
         
-        model = self._get_model()
         try:
-            extractor_response = model.generate_content(extractor_prompt)
-            structured_data = extractor_response.text
+            structured_data = self._generate(extractor_prompt)
         except Exception as e:
             structured_data = f"Error running Extractor Agent: {e}\nRaw fallback data will be processed."
             
@@ -142,8 +208,7 @@ class CompetitorIntelligenceSystem:
         """
         
         try:
-            analyst_response = model.generate_content(analyst_prompt)
-            analysis_output = analyst_response.text
+            analysis_output = self._generate(analyst_prompt)
         except Exception as e:
             analysis_output = f"Error running Analyst Agent: {e}"
 
@@ -175,15 +240,14 @@ class CompetitorIntelligenceSystem:
         """
         
         try:
-            strategist_response = model.generate_content(strategist_prompt)
-            battlecard_md = strategist_response.text
+            battlecard_md = self._generate(strategist_prompt)
         except Exception as e:
             battlecard_md = f"Error running Strategist Agent: {e}"
             
         # Get brief summary for database storage
         summary_prompt = f"Summarize this sales battlecard in a 2-sentence executive summary:\n{battlecard_md}"
         try:
-            summary = model.generate_content(summary_prompt).text
+            summary = self._generate(summary_prompt)
         except Exception:
             summary = f"Competitive Battlecard for {competitor_name}."
 
